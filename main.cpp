@@ -1,6 +1,9 @@
 #include <iostream>
+#include "Game.hpp"
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    TicTacToe game;
+    game.gameplay();
+
     return 0;
 }

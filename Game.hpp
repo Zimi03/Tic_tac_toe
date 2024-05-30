@@ -4,64 +4,65 @@
 #include <vector>
 #include <iostream>
 
+
 const char PLAYER = 'X';
 const char COMPUTER = 'O';
 const char EMPTY = '*';
 
-const char DRAW = 'D';
-const char NONE = 'N';
 
 class TicTacToe {
 private:
     int board_size;
+    int num_to_win;
     std::vector<std::vector<char>> board;
 
-    char checkWin() const {
+    enum class Result { DRAW = 0, WIN = 1, LOSE = -1 };
+
+
+
+    bool is_win(char player) const {
         // check rows
         for (int i = 0; i < board_size; i++) {
-            bool whole_row = true;
-            for (int j = 0; j < board_size - 1; j++) {
-                if (board[i][j] != board[i][j + 1]) {
-                    whole_row = false;
-                    break;
-                }
+            int row_count = 0;
+            for (int j = 0; j < board_size; j++) {
+                if (board[i][j] == player) row_count++;
             }
-            if (whole_row && board[i][0] != EMPTY) return board[i][0];
+            if (row_count >= num_to_win) return true;
         }
 
         // check columns
-        for (int i = 0; i < board_size - 1; i++) {
-            bool whole_column = true;
+        for (int i = 0; i < board_size; i++) {
+            int col_count = 0;
             for (int j = 0; j < board_size; j++) {
-                if (board[j][i] != board[j][i + 1]) {
-                    whole_column = false;
-                    break;
-                }
+                if (board[j][i] == player) col_count++;
             }
-            if (whole_column && board[0][i] != EMPTY) return board[0][i];
+
+            if (col_count >= num_to_win) return true;
         }
 
         // check diagonals
-        bool whole_diagonal = true;
-        for (int i = 0; i < board_size - 1; i++) {
-            if (board[i][i] != board[i + 1][i + 1]) whole_diagonal = false;
+        int left_to_right_diag_count = 0;
+        for (int i = 0; i < board_size; i++) {
+            if (board[i][i] == player) left_to_right_diag_count++;
         }
-        if (whole_diagonal && board[0][0] != EMPTY) return board[0][0];
+        if (left_to_right_diag_count >= num_to_win) return true;
 
-        whole_diagonal = true;
-        for (int i = 0 ; i < board_size - 1; i++) {
-            if (board[i][board_size - i - 1] != board[i + 1][board_size - i - 2]) whole_diagonal = false;
+        int right_to_left_diag_count = 0;
+        for (int i = 0 ; i < board_size; i++) {
+            if (board[i][board_size - i - 1] == player) right_to_left_diag_count++;
         }
-        if (whole_diagonal && board[0][board_size - 1] != EMPTY) return board[0][board_size - 1];
+        if (right_to_left_diag_count >= num_to_win) return true;
 
-        // check draw
+        return false;
+    }
+
+    bool is_draw() const {
         for (int i = 0; i < board_size; i++) {
             for (int j = 0; j < board_size; j++) {
-                if (board[i][j] == EMPTY) return NONE;
+                if (board[i][j] == EMPTY) return false;
             }
         }
-
-        return DRAW;
+        return true;
     }
 
     void reset() {
@@ -81,10 +82,20 @@ private:
     }
 
 public:
-    TicTacToe(): board_size(3), board(board_size, std::vector<char>(board_size, EMPTY)) {}
+    TicTacToe(): board_size(3), num_to_win(3), board(board_size, std::vector<char>(board_size, EMPTY)) {}
 
-    explicit TicTacToe(int board_size ) {
+    explicit TicTacToe(int board_size) {
         this->board_size = board_size;
+        this->num_to_win = board_size;
+        board.resize(board_size, std::vector<char>(board_size, EMPTY));
+    }
+
+    explicit TicTacToe(int board_size, int num_to_win ) {
+        this->board_size = board_size;
+        this->num_to_win = std::min(num_to_win, board_size);
+        if (num_to_win > board_size) {
+            std::cout << "Provided num to win is greater than board size, using board size as num to win" << std::endl;
+        }
         board.resize(board_size, std::vector<char>(board_size, EMPTY));
     }
 
@@ -103,7 +114,6 @@ public:
         while (true) {
             displayBoard();
             std::cout << "Player " << current_player << " turn" << std::endl;
-            std::cout << std::endl;
 
             int row, col;
             std::cin >> row >> col;
@@ -115,14 +125,13 @@ public:
 
             board[row][col] = current_player;
 
-            const char result = checkWin();
-            if (result != NONE) {
-                if (result == DRAW) {
-                    std::cout << "It's a draw!" << std::endl;
-                    break;
-                }
+            if (is_win(current_player)) {
+                std::cout << "Player " << current_player << " won!" << std::endl;
+                break;
+            }
 
-                std::cout << "Player " << result << " won!" << std::endl;
+            if (is_draw()) {
+                std::cout << "It's a draw!" << std::endl;
                 break;
             }
 

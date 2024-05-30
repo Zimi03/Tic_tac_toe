@@ -2,7 +2,7 @@
 #include "Game.hpp"
 
 int main() {
-    TicTacToe game;
+    TicTacToe game(4);
     game.gameplay();
 
     return 0;

@@ -3,12 +3,11 @@
 
 #include <vector>
 #include <iostream>
-
+#include <SFML/Graphics.hpp>
 
 const char PLAYER = 'X';
 const char COMPUTER = 'O';
 const char EMPTY = '*';
-
 
 class TicTacToe {
 private:
@@ -16,6 +15,7 @@ private:
     int num_to_win;
     int max_depth;
     std::vector<std::vector<char>> board;
+    sf::RenderWindow window;
 
     bool is_win(char player) const {
         // check rows
@@ -156,74 +156,151 @@ private:
         return best_score;
     }
 
-    void displayBoard() const {
+    void displayBoard(std::optional<char> score = std::nullopt) {
+        window.clear(sf::Color::Black);
+
+        sf::Text result_prompt;
+        sf::Font font;
+        font.loadFromFile("../arial.ttf");
+
+        if (score.has_value()) {
+            if (score.value() == PLAYER) {
+                result_prompt.setString("Player Wins!");
+                result_prompt.setFont(font);
+                result_prompt.setPosition(window.getSize().x / 5, window.getSize().y / 2);
+                result_prompt.setCharacterSize(75);
+                result_prompt.setFillColor(sf::Color::Red);
+            }
+            else if (score.value() == COMPUTER) {
+                result_prompt.setString("Computer Wins!");
+                result_prompt.setFont(font);
+                result_prompt.setPosition(window.getSize().x / 5, window.getSize().y / 2);
+                result_prompt.setCharacterSize(75);
+                result_prompt.setFillColor(sf::Color::Blue);
+            }
+            else {
+                result_prompt.setString("Draw!");
+                result_prompt.setFont(font);
+                result_prompt.setPosition(window.getSize().x / 5, window.getSize().y / 2);
+                result_prompt.setCharacterSize(75);
+                result_prompt.setFillColor(sf::Color::Green);
+            }
+
+        }
+
+        window.draw(result_prompt);
+
+        float cell_width = window.getSize().x / static_cast<float>(board_size);
+        float cell_height = window.getSize().y / static_cast<float>(board_size);
         for (int i = 0; i < board_size; i++) {
             for (int j = 0; j < board_size; j++) {
-                std::cout << board[i][j] << " ";
+                sf::RectangleShape cell(sf::Vector2f(cell_width, cell_height));
+                cell.setPosition(j * cell_width, i * cell_height);
+                cell.setOutlineThickness(2.f);
+                cell.setOutlineColor(sf::Color::White);
+                cell.setFillColor(sf::Color::Transparent);
+                window.draw(cell);
+
+                if (board[i][j] == PLAYER) {
+                    sf::RectangleShape xMark(sf::Vector2f(cell_width * std::sqrt(2), 4.f));
+                    xMark.setPosition(j * cell_width, i * cell_height);
+                    xMark.setFillColor(sf::Color::White);
+                    xMark.rotate(45.f);
+                    window.draw(xMark);
+                    sf::RectangleShape x2Mark(sf::Vector2f(cell_width * std::sqrt(2), 3.f));
+                    x2Mark.setPosition(j * cell_width, i * cell_height + cell_height);
+                    x2Mark.setFillColor(sf::Color::White);
+                    x2Mark.rotate(-45.f);
+                    window.draw(x2Mark);
+                }
+                else if (board[i][j] == COMPUTER) {
+                    sf::CircleShape oMark(cell_width / 2);
+                    oMark.setPosition(j * cell_width, i * cell_height);
+                    oMark.setFillColor(sf::Color::Transparent);
+                    oMark.setOutlineThickness(3.f);
+                    oMark.setOutlineColor(sf::Color::White);
+                    oMark.setOrigin(cell_width / 2, cell_height / 2);
+                    oMark.move(cell_width / 2, cell_height / 2);
+                    window.draw(oMark);
+                }
             }
-            std::cout << std::endl;
         }
+
+        window.display();
     }
 
 public:
-    TicTacToe(): board_size(3), num_to_win(3), max_depth(100 / 9 + 2), board(board_size, std::vector<char>(board_size, EMPTY)) {}
+    TicTacToe(): board_size(3), num_to_win(3), max_depth(100 / 9 + 2), board(board_size, std::vector<char>(board_size, EMPTY)), window(sf::VideoMode(800, 800), "Tic Tac Toe") {}
 
     explicit TicTacToe(int board_size) {
         this->board_size = board_size;
         this->num_to_win = board_size;
         this->max_depth = 100 / (board_size * board_size) + std::ceil(std::sqrt(board_size));
         board.resize(board_size, std::vector<char>(board_size, EMPTY));
+        window.create(sf::VideoMode(800, 800), "Tic Tac Toe");
     }
 
     explicit TicTacToe(int board_size, int num_to_win ) {
         this->board_size = board_size;
         this->num_to_win = std::min(num_to_win, board_size);
         this->max_depth = 100 / (board_size * board_size) + std::ceil(std::sqrt(board_size));
-        if (num_to_win > board_size) {
-            std::cout << "Provided num to win is greater than board size, using board size as num to win" << std::endl;
+        if (num_to_win > board_size || num_to_win < 3) {
+            std::cout << "Provided num to win is invalid, using board size as num to win" << std::endl;
         }
         board.resize(board_size, std::vector<char>(board_size, EMPTY));
+        window.create(sf::VideoMode(800, 800), "Tic Tac Toe");
     }
 
     void gameplay() {
-        char current_player = PLAYER;
+        bool is_game_over = false;
 
-        while (true) {
-            displayBoard();
-            std::cout << "Player " << current_player << " turn" << std::endl;
+        while (window.isOpen()) {
+            if (!is_game_over) displayBoard();
 
-            std::pair<int, int> move;
-            if (current_player == COMPUTER) {
-                move = computer_move();
-            } else {
-                int row, col;
-                std::cin >> row >> col;
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) window.close();
 
-                if (!is_move_valid(row, col)) {
-                    std::cout << "Invalid move" << std::endl;
-                    continue;
+                else if (event.type == sf::Event::MouseButtonPressed && !is_game_over) {
+                    if (event.mouseButton.button == sf::Mouse::Left) {
+                        const int mouse_x = event.mouseButton.x;
+                        const int mouse_y = event.mouseButton.y;
+                        const int row = mouse_y / (window.getSize().y / board_size);
+                        const int col = mouse_x / (window.getSize().x / board_size);
+
+                        if (is_move_valid(row, col)) {
+                            board[row][col] = PLAYER;
+                            displayBoard();
+
+                            if (is_win(PLAYER)) {
+                                std::cout << "Player Wins!" << std::endl;
+                                displayBoard(PLAYER);
+                                is_game_over = true;
+                            }
+                            else if (is_draw()) {
+                                std::cout << "Draw!" << std::endl;
+                                displayBoard('D');
+                                is_game_over = true;
+                            }
+
+                            std::pair<int,int> move = computer_move();
+                            board[move.first][move.second] = COMPUTER;
+
+                            if (is_win(COMPUTER)) {
+                                std::cout << "Computer Wins!" << std::endl;
+                                displayBoard(COMPUTER);
+                                is_game_over = true;
+                            }
+                            else if (is_draw()) {
+                                std::cout << "Draw!" << std::endl;
+                                displayBoard('D');
+                                is_game_over = true;
+                            }
+                        }
+                    }
                 }
-
-                move = std::make_pair(row, col);
             }
-
-            board[move.first][move.second] = current_player;
-
-            if (is_win(current_player)) {
-                std::cout << "Player " << current_player << " won!" << std::endl;
-                break;
-            }
-
-            if (is_draw()) {
-                std::cout << "It's a draw!" << std::endl;
-                break;
-            }
-
-            current_player = current_player == PLAYER ? COMPUTER : PLAYER;
         }
-
-        displayBoard();
-        std::cout << "Game over!" << std::endl;
     }
 };
 

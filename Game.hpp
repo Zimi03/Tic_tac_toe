@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 #include <SFML/Graphics.hpp>
+#include <optional>
+#include <math.h>
 
 const char PLAYER = 'X';
 const char COMPUTER = 'O';
@@ -246,6 +248,7 @@ public:
         this->max_depth = 100 / (board_size * board_size) + std::ceil(std::sqrt(board_size));
         if (num_to_win > board_size || num_to_win < 3) {
             std::cout << "Provided num to win is invalid, using board size as num to win" << std::endl;
+            this->num_to_win = board_size;
         }
         board.resize(board_size, std::vector<char>(board_size, EMPTY));
         window.create(sf::VideoMode(800, 800), "Tic Tac Toe");
